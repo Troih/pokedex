@@ -271,6 +271,20 @@
     }
 
     .modal-desc.visible { display: block; }
+
+    .desc-replay-btn {
+      margin-top: 10px;
+      background: none;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.45rem;
+      padding: 6px 10px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .desc-replay-btn:hover { border-color: #CC0000; color: #CC0000; }
   </style>
 </head>
 <body>
@@ -299,6 +313,7 @@
     <div class="modal-name" id="modal-name"></div>
     <button class="modal-more-btn" id="modal-more-btn">Mer info</button>
     <div class="modal-desc" id="modal-desc"></div>
+    <button class="desc-replay-btn" id="desc-replay-btn" style="display:none">🔊 Läs upp igen</button>
   </div>
 </div>
 
@@ -342,6 +357,7 @@
   const modalNum   = document.getElementById("modal-number");
   const moreBtn    = document.getElementById("modal-more-btn");
   const modalDesc  = document.getElementById("modal-desc");
+  const replayBtn  = document.getElementById("desc-replay-btn");
 
   const descCache = {};
   let currentId = null;
@@ -353,10 +369,12 @@
     modalImg.alt          = name;
     modalName.textContent = name;
     modalDesc.classList.remove("visible");
-    modalDesc.textContent = "";
-    moreBtn.style.display = "inline-block";
-    moreBtn.disabled      = false;
-    moreBtn.textContent   = "Mer info";
+    modalDesc.textContent  = "";
+    replayBtn.style.display = "none";
+    moreBtn.style.display  = "inline-block";
+    moreBtn.disabled       = false;
+    moreBtn.textContent    = "Mer info";
+    window.speechSynthesis && window.speechSynthesis.cancel();
     backdrop.classList.add("open");
   }
 
@@ -367,6 +385,16 @@
       currentAudio.currentTime = 0;
       currentAudio = null;
     }
+    window.speechSynthesis && window.speechSynthesis.cancel();
+  }
+
+  function speakSwedish(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang  = "sv-SE";
+    u.rate  = 0.9;
+    window.speechSynthesis.speak(u);
   }
 
   async function fetchDescription(id) {
@@ -387,15 +415,19 @@
     moreBtn.textContent = "Laddar...";
     try {
       const text = await fetchDescription(currentId);
-      modalDesc.textContent = text;
+      modalDesc.textContent   = text;
       modalDesc.classList.add("visible");
-      moreBtn.style.display = "none";
+      moreBtn.style.display   = "none";
+      replayBtn.style.display = "inline-block";
+      speakSwedish(text);
     } catch {
       modalDesc.textContent = "Kunde inte hämta information just nu.";
       modalDesc.classList.add("visible");
       moreBtn.style.display = "none";
     }
   });
+
+  replayBtn.addEventListener("click", () => speakSwedish(modalDesc.textContent));
 
   document.getElementById("modal-close").addEventListener("click", closeModal);
   backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
