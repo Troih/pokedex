@@ -240,6 +240,37 @@
     }
 
     .modal-close:hover { color: #CC0000; }
+
+    .modal-more-btn {
+      margin-top: 18px;
+      background: #CC0000;
+      color: #fff;
+      border: 3px solid #000;
+      border-radius: 8px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.55rem;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .modal-more-btn:hover { background: #aa0000; }
+    .modal-more-btn:disabled { background: #888; cursor: default; }
+
+    .modal-desc {
+      display: none;
+      margin-top: 16px;
+      font-family: sans-serif;
+      font-size: 0.85rem;
+      color: #333;
+      line-height: 1.6;
+      max-width: 280px;
+      text-align: left;
+      border-top: 2px solid #eee;
+      padding-top: 12px;
+    }
+
+    .modal-desc.visible { display: block; }
   </style>
 </head>
 <body>
@@ -266,6 +297,8 @@
     <div class="modal-number" id="modal-number"></div>
     <img class="modal-img" id="modal-img" src="" alt="" />
     <div class="modal-name" id="modal-name"></div>
+    <button class="modal-more-btn" id="modal-more-btn">Mer info</button>
+    <div class="modal-desc" id="modal-desc"></div>
   </div>
 </div>
 
@@ -303,16 +336,27 @@
 
   let currentAudio = null;
 
-  const backdrop  = document.getElementById("modal-backdrop");
-  const modalImg  = document.getElementById("modal-img");
-  const modalName = document.getElementById("modal-name");
-  const modalNum  = document.getElementById("modal-number");
+  const backdrop   = document.getElementById("modal-backdrop");
+  const modalImg   = document.getElementById("modal-img");
+  const modalName  = document.getElementById("modal-name");
+  const modalNum   = document.getElementById("modal-number");
+  const moreBtn    = document.getElementById("modal-more-btn");
+  const modalDesc  = document.getElementById("modal-desc");
+
+  const descCache = {};
+  let currentId = null;
 
   function openModal(id, name) {
+    currentId = id;
     modalNum.textContent  = `#${String(id).padStart(3, "0")}`;
     modalImg.src          = `${ANIMATED_BASE}${id}.gif`;
     modalImg.alt          = name;
     modalName.textContent = name;
+    modalDesc.classList.remove("visible");
+    modalDesc.textContent = "";
+    moreBtn.style.display = "inline-block";
+    moreBtn.disabled      = false;
+    moreBtn.textContent   = "Mer info";
     backdrop.classList.add("open");
   }
 
@@ -324,6 +368,34 @@
       currentAudio = null;
     }
   }
+
+  async function fetchDescription(id) {
+    if (descCache[id]) return descCache[id];
+    const res  = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`);
+    const data = await res.json();
+    const entry = data.flavor_text_entries.find(e => e.language.name === "en");
+    const text  = entry.flavor_text.replace(/\f|\n/g, " ");
+    const trans = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|sv`);
+    const tj    = await trans.json();
+    const sv    = tj.responseData.translatedText;
+    descCache[id] = sv;
+    return sv;
+  }
+
+  moreBtn.addEventListener("click", async () => {
+    moreBtn.disabled    = true;
+    moreBtn.textContent = "Laddar...";
+    try {
+      const text = await fetchDescription(currentId);
+      modalDesc.textContent = text;
+      modalDesc.classList.add("visible");
+      moreBtn.style.display = "none";
+    } catch {
+      modalDesc.textContent = "Kunde inte hämta information just nu.";
+      modalDesc.classList.add("visible");
+      moreBtn.style.display = "none";
+    }
+  });
 
   document.getElementById("modal-close").addEventListener("click", closeModal);
   backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
