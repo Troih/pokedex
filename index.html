@@ -162,6 +162,84 @@
       text-shadow: 1px 1px 0 #000;
       opacity: 0.8;
     }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .modal {
+      background: #fff;
+      border: 5px solid #000;
+      border-radius: 16px;
+      padding: 32px 40px;
+      text-align: center;
+      position: relative;
+      animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+      min-width: 220px;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .modal-number {
+      font-size: 0.5rem;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .modal-img {
+      width: 180px;
+      height: 180px;
+      image-rendering: pixelated;
+      display: block;
+      margin: 0 auto;
+      animation: float 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes float {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-10px); }
+    }
+
+    .modal-name {
+      font-size: 1rem;
+      color: #222;
+      margin-top: 16px;
+      text-shadow: 2px 2px 0 #ddd;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.7rem;
+      cursor: pointer;
+      color: #888;
+    }
+
+    .modal-close:hover { color: #CC0000; }
   </style>
 </head>
 <body>
@@ -181,6 +259,15 @@
 </div>
 
 <footer>GEN 1 &nbsp;·&nbsp; 151 POKÉMON</footer>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="modal-number" id="modal-number"></div>
+    <img class="modal-img" id="modal-img" src="" alt="" />
+    <div class="modal-name" id="modal-name"></div>
+  </div>
+</div>
 
 <script>
   const POKEMON = [
@@ -211,9 +298,36 @@
     "Zapdos","Moltres","Dratini","Dragonair","Dragonite","Mewtwo","Mew"
   ];
 
-  const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
+  const SPRITE_BASE    = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
+  const ANIMATED_BASE  = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/";
 
   let currentAudio = null;
+
+  const backdrop  = document.getElementById("modal-backdrop");
+  const modalImg  = document.getElementById("modal-img");
+  const modalName = document.getElementById("modal-name");
+  const modalNum  = document.getElementById("modal-number");
+
+  function openModal(id, name) {
+    modalNum.textContent  = `#${String(id).padStart(3, "0")}`;
+    modalImg.src          = `${ANIMATED_BASE}${id}.gif`;
+    modalImg.alt          = name;
+    modalName.textContent = name;
+    backdrop.classList.add("open");
+  }
+
+  function closeModal() {
+    backdrop.classList.remove("open");
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio = null;
+    }
+  }
+
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
   function speak(id) {
     if (currentAudio) {
@@ -222,6 +336,7 @@
     }
     currentAudio = new Audio(`sounds/${id}.mp3`);
     currentAudio.play();
+    currentAudio.addEventListener("ended", closeModal);
   }
 
   const grid = document.getElementById("grid");
@@ -241,8 +356,9 @@
     card.addEventListener("click", () => {
       document.querySelectorAll(".card.speaking").forEach(c => c.classList.remove("speaking"));
       card.classList.add("speaking");
-      speak(id);
       card.addEventListener("animationend", () => card.classList.remove("speaking"), { once: true });
+      openModal(id, name);
+      speak(id);
     });
 
     grid.appendChild(card);
