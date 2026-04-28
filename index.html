@@ -213,34 +213,15 @@
 
   const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
 
-  let voices = [];
+  let currentAudio = null;
 
-  function loadVoices() {
-    voices = window.speechSynthesis.getVoices();
-  }
-
-  if ('speechSynthesis' in window) {
-    loadVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-  } else {
-    document.querySelector('.subtitle').textContent = "⚠️ Your browser does not support text-to-speech.";
-  }
-
-  function speak(name) {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-
-    setTimeout(() => {
-      const u = new SpeechSynthesisUtterance(name);
-      u.lang = "en-US";
-      u.rate = 0.88;
-      u.pitch = 1.1;
-
-      const englishVoice = voices.find(v => v.lang.startsWith("en"));
-      if (englishVoice) u.voice = englishVoice;
-
-      window.speechSynthesis.speak(u);
-    }, 50);
+  function speak(id) {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+    currentAudio = new Audio(`sounds/${id}.mp3`);
+    currentAudio.play();
   }
 
   const grid = document.getElementById("grid");
@@ -260,7 +241,7 @@
     card.addEventListener("click", () => {
       document.querySelectorAll(".card.speaking").forEach(c => c.classList.remove("speaking"));
       card.classList.add("speaking");
-      speak(name);
+      speak(id);
       card.addEventListener("animationend", () => card.classList.remove("speaking"), { once: true });
     });
 
