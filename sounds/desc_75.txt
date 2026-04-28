@@ -1,0 +1,1 @@
+Rullar nedför sluttningar för att flytta. Den rullar över alla hinder utan att sakta ner eller ändra riktning.

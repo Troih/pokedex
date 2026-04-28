@@ -369,12 +369,11 @@
     modalImg.alt          = name;
     modalName.textContent = name;
     modalDesc.classList.remove("visible");
-    modalDesc.textContent  = "";
+    modalDesc.textContent   = "";
     replayBtn.style.display = "none";
-    moreBtn.style.display  = "inline-block";
-    moreBtn.disabled       = false;
-    moreBtn.textContent    = "Mer info";
-    window.speechSynthesis && window.speechSynthesis.cancel();
+    moreBtn.style.display   = "inline-block";
+    moreBtn.disabled        = false;
+    moreBtn.textContent     = "Mer info";
     backdrop.classList.add("open");
   }
 
@@ -385,29 +384,30 @@
       currentAudio.currentTime = 0;
       currentAudio = null;
     }
-    window.speechSynthesis && window.speechSynthesis.cancel();
+    if (currentDescAudio) {
+      currentDescAudio.pause();
+      currentDescAudio.currentTime = 0;
+      currentDescAudio = null;
+    }
   }
 
-  function speakSwedish(text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang  = "sv-SE";
-    u.rate  = 0.9;
-    window.speechSynthesis.speak(u);
+  let currentDescAudio = null;
+
+  function speakSwedish(id) {
+    if (currentDescAudio) {
+      currentDescAudio.pause();
+      currentDescAudio.currentTime = 0;
+    }
+    currentDescAudio = new Audio(`sounds/desc_${id}.mp3`);
+    currentDescAudio.play();
   }
 
   async function fetchDescription(id) {
     if (descCache[id]) return descCache[id];
-    const res  = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`);
-    const data = await res.json();
-    const entry = data.flavor_text_entries.find(e => e.language.name === "en");
-    const text  = entry.flavor_text.replace(/\f|\n/g, " ");
-    const trans = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|sv`);
-    const tj    = await trans.json();
-    const sv    = tj.responseData.translatedText;
-    descCache[id] = sv;
-    return sv;
+    const res  = await fetch(`sounds/desc_${id}.txt`);
+    const text = await res.text();
+    descCache[id] = text.trim();
+    return descCache[id];
   }
 
   moreBtn.addEventListener("click", async () => {
@@ -419,7 +419,7 @@
       modalDesc.classList.add("visible");
       moreBtn.style.display   = "none";
       replayBtn.style.display = "inline-block";
-      speakSwedish(text);
+      speakSwedish(currentId);
     } catch {
       modalDesc.textContent = "Kunde inte hämta information just nu.";
       modalDesc.classList.add("visible");
@@ -427,7 +427,7 @@
     }
   });
 
-  replayBtn.addEventListener("click", () => speakSwedish(modalDesc.textContent));
+  replayBtn.addEventListener("click", () => speakSwedish(currentId));
 
   document.getElementById("modal-close").addEventListener("click", closeModal);
   backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
